@@ -132,17 +132,24 @@ def main():
         # freeze_re(model.model, freeze=False)
 
         # ---------- stage control ----------
-        tempi = 0
-# 000000000000000000000000000000000000000000000
+        # 阶段 0 (0 - freeze_phys_epoch): 只训练物理模块
+        # 阶段 1 (freeze_phys_epoch - freeze_phys_epoch + refine_only_epochs): 只训练精炼分支
+        # 阶段 2 (freeze_phys_epoch + refine_only_epochs +): 联合训练
         if epoch < opt.freeze_phys_epoch:
+            # 阶段 0: 只训练物理模块，精炼分支冻结
             tempi = 0
             freeze_physics(model.model, freeze=False)
             freeze_re(model.model, freeze=True)
+        elif epoch < opt.freeze_phys_epoch + opt.refine_only_epochs:
+            # 阶段 1: 只训练精炼分支，物理模块冻结
+            tempi = 1
+            freeze_physics(model.model, freeze=True)
+            freeze_re(model.model, freeze=False)
         else:
+            # 阶段 2: 联合训练
             tempi = 2
             freeze_physics(model.model, freeze=False)
             freeze_re(model.model, freeze=False)
-# 000000000000000000000000000000000000000000
         # ---------- train ----------
 
         # if epoch < opt.freeze_phys_epoch:

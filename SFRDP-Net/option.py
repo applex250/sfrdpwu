@@ -53,6 +53,13 @@ parser.add_argument(
     help='epochs to freeze physics branch'
 )
 
+parser.add_argument(
+    '--refine_only_epochs',
+    type=int,
+    default=100,
+    help='epochs to train refinement branch only (stage 1)'
+)
+
 
 opt = parser.parse_args()
 

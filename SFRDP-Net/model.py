@@ -131,7 +131,13 @@ class Model(nn.Module):
             g_lp = torch.nn.functional.avg_pool2d(g, 15, 1, 7)
             loss_g = torch.mean(torch.abs(g - g_lp))
 
-            lp = loss_phys + 0.1 * loss_t + 0.05 * loss_g
+            # 物理一致性检查: 重建的有雾图像应该与输入一致
+            # I = t * J + (1 - t) * g
+            I_reconstructed = t * J_final + (1 - t) * g
+            loss_consistency = self.criterion1(I_reconstructed, hazy)
+
+            # 增强 t/g 约束 + 添加物理一致性损失
+            lp = loss_phys + 0.15 * loss_t + 0.08 * loss_g + 0.05 * loss_consistency
 
             # loss_p2 = self.criterion2(J_phys, J_final)
             # loss_p2 = self.criterion2(J_phys, gt)
@@ -145,15 +151,19 @@ class Model(nn.Module):
             # target_fft = torch.fft.rfft2(gt, norm='ortho')
             # lfft= self.criterion(torch.abs(pred_fft), torch.abs(target_fft))
 
-            lr = l1 + 0.1 * l2 + 0.06 * l3 + 0.6 * l4 + l5  # 添加 SSIM Loss
+            # 调整精炼损失权重：增加频域和感知损失权重
+            lr = l1 + 0.15 * l2 + 0.08 * l3 + 0.5 * l4 + l5  # 添加 SSIM Loss
             # lp = loss_phys +0.1 * loss_t +0.05 * loss_g +  0.001*loss_p2+ 0.01*loss_p3
             loss = 0
             if i == 0:
+                # 阶段 0: 只有物理损失
                 loss = lp
             elif i == 1:
-                loss = lr
+                # 阶段 1: 精炼损失 + 轻微物理约束（10%）
+                loss = lr + 0.1 * lp
             elif i == 2:
-                loss = 0.7 * lr + 0.3 * lp
+                # 阶段 2: 联合训练，增加物理约束权重
+                loss = 0.6 * lr + 0.4 * lp
 
 
             loss.backward()
